@@ -134,34 +134,47 @@ func (a *imagePolicyWebhook) Admit(attributes admission.Attributes) (err error) 
 			Namespace:   attributes.GetNamespace(),
 		},
 	}
-	if err := a.admitPod(attributes, &imageReview); err != nil {
+	resolvedImages, err := a.admitPod(attributes, &imageReview)
+	if err != nil {
 		return admission.NewForbidden(attributes, err)
 	}
+
+	for i, container := range pod.Spec.Containers {
+		if resolvedImage, ok := resolvedImages[container.Image]; ok {
+			pod.Spec.Containers[i] = resolvedImage
+		}
+	}
+	for i, container := range pod.Spec.InitContainers {
+		if resolvedImage, ok := resolvedImages[container.Image]; ok {
+			pod.Spec.InitContainers[i] = resolvedImage
+		}
+	}
+
 	return nil
 }
 
-func (a *imagePolicyWebhook) admitPod(attributes admission.Attributes, review *v1alpha1.ImageReview) error {
+func (a *imagePolicyWebhook) admitPod(attributes admission.Attributes, review *v1alpha1.ImageReview) (map[string]string, error) {
 	cacheKey, err := json.Marshal(review.Spec)
 	if err != nil {
-		return err
+		return nil, err
 	}
 	if entry, ok := a.responseCache.Get(string(cacheKey)); ok {
 		review.Status = entry.(v1alpha1.ImageReviewStatus)
 	} else {
 		result := a.webhook.WithExponentialBackoff(func() rest.Result {
-			return a.webhook.RestClient.Post().Body(review).Do()
+			return nil, a.webhook.RestClient.Post().Body(review).Do()
 		})
 
 		if err := result.Error(); err != nil {
-			return a.webhookError(attributes, err)
+			return nil, a.webhookError(attributes, err)
 		}
 		var statusCode int
 		if result.StatusCode(&statusCode); statusCode < 200 || statusCode >= 300 {
-			return a.webhookError(attributes, fmt.Errorf("Error contacting webhook: %d", statusCode))
+			return nil, a.webhookError(attributes, fmt.Errorf("Error contacting webhook: %d", statusCode))
 		}
 
 		if err := result.Into(review); err != nil {
-			return a.webhookError(attributes, err)
+			return nil, a.webhookError(attributes, err)
 		}
 
 		a.responseCache.Add(string(cacheKey), review.Status, a.statusTTL(review.Status))
@@ -169,12 +182,12 @@ func (a *imagePolicyWebhook) admitPod(attributes admission.Attributes, review *v
 
 	if !review.Status.Allowed {
 		if len(review.Status.Reason) > 0 {
-			return fmt.Errorf("image policy webook backend denied one or more images: %s", review.Status.Reason)
+			return nil, fmt.Errorf("image policy webook backend denied one or more images: %s", review.Status.Reason)
 		}
-		return errors.New("one or more images rejected by webhook backend")
+		return nil, errors.New("one or more images rejected by webhook backend")
 	}
 
-	return nil
+	return review.Status.Digests, nil
 }
 
 // NewImagePolicyWebhook a new imagePolicyWebhook from the provided config file.

@@ -63,4 +63,9 @@ type ImageReviewStatus struct {
 	// may contain a short description of what is wrong.  Kubernetes
 	// may truncate excessively long errors when displaying to the user.
 	Reason string
+
+	// Digests should be empty unless Allowed is true, in which case it
+	// may provide digests to use in the container spec instead of the submitted tag
+	// Digests maps old Image strings (with tags) to new Image strings (with digests)
+	Digests map[string]string
 }
