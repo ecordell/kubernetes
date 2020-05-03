@@ -73,6 +73,8 @@ type ServerRunOptions struct {
 	ProxyClientKeyFile  string
 
 	EnableAggregatorRouting bool
+	// a custom prefix to use for apiextensions and api aggregation
+	ExtensionAggregationEtcdPrefix string
 
 	MasterCount            int
 	EndpointReconcilerType string
@@ -241,6 +243,9 @@ func (s *ServerRunOptions) Flags() (fss cliflag.NamedFlagSets) {
 
 	fs.BoolVar(&s.EnableAggregatorRouting, "enable-aggregator-routing", s.EnableAggregatorRouting,
 		"Turns on aggregator routing requests to endpoints IP rather than cluster IP.")
+
+	fs.StringVar(&s.ExtensionAggregationEtcdPrefix, "extension-ectd-prefix", s.ExtensionAggregationEtcdPrefix,
+		"Sets a custom etcd prefix to use for api aggregation and api extension storage.")
 
 	fs.StringVar(&s.ServiceAccountSigningKeyFile, "service-account-signing-key-file", s.ServiceAccountSigningKeyFile, ""+
 		"Path to the file that contains the current private key of the service account token issuer. The issuer will sign issued ID tokens with this private key. (Requires the 'TokenRequest' feature gate.)")

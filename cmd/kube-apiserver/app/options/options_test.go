@@ -117,6 +117,7 @@ func TestAddFlags(t *testing.T) {
 		"--request-timeout=2m",
 		"--storage-backend=etcd3",
 		"--service-cluster-ip-range=192.168.128.0/17",
+		"--extension-ectd-prefix=/separate-tenant",
 	}
 	fs.Parse(args)
 
@@ -304,11 +305,12 @@ func TestAddFlags(t *testing.T) {
 		EgressSelector: &apiserveroptions.EgressSelectorOptions{
 			ConfigFile: "/var/run/kubernetes/egress-selector/connectivity.yaml",
 		},
-		EnableLogsHandler:       false,
-		EnableAggregatorRouting: true,
-		ProxyClientKeyFile:      "/var/run/kubernetes/proxy.key",
-		ProxyClientCertFile:     "/var/run/kubernetes/proxy.crt",
-		Metrics:                 &metrics.Options{},
+		EnableLogsHandler:              false,
+		EnableAggregatorRouting:        true,
+		ExtensionAggregationEtcdPrefix: "/separate-tenant",
+		ProxyClientKeyFile:             "/var/run/kubernetes/proxy.key",
+		ProxyClientCertFile:            "/var/run/kubernetes/proxy.crt",
+		Metrics:                        &metrics.Options{},
 	}
 
 	if !reflect.DeepEqual(expected, s) {
