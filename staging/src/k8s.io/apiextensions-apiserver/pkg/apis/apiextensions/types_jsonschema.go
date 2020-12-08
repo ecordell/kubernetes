@@ -122,6 +122,11 @@ type JSONSchemaProps struct {
 	//      Atomic maps will be entirely replaced when updated.
 	// +optional
 	XMapType *string
+
+	// SpecExtensions holds all remaining OpenAPI Specification Extensions, keys with `x-` prefixes that do not match
+	// any of the hard-oded spec extensions above.
+	// see: https://github.com/OAI/OpenAPI-Specification/blob/master/versions/3.0.0.md#specificationExtensions
+	SpecExtensions map[string]interface{}
 }
 
 // JSON represents any valid JSON value.

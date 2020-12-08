@@ -18,6 +18,7 @@ package v1
 
 import (
 	"errors"
+	"strings"
 
 	"k8s.io/apimachinery/pkg/util/json"
 )
@@ -116,6 +117,47 @@ func (s *JSONSchemaPropsOrArray) UnmarshalJSON(data []byte) error {
 		}
 	}
 	*s = nw
+	return nil
+}
+
+func (s JSONSchemaProps) MarshalJSON() ([]byte, error) {
+	type JSONSchemaPropsAlias JSONSchemaProps
+
+	if len(s.SpecExtensions) == 0 {
+		return json.Marshal(JSONSchemaPropsAlias(s))
+	}
+	all := make(map[string]interface{})
+	bytes, err := json.Marshal(JSONSchemaPropsAlias(s))
+	if err != nil {
+		return nil, err
+	}
+	if err := json.Unmarshal(bytes, &all); err != nil {
+		return nil, err
+	}
+	for x, val := range s.SpecExtensions {
+		all[x] = val
+	}
+	return json.Marshal(all)
+}
+
+func (s *JSONSchemaProps) UnmarshalJSON(data []byte) error {
+	type JSONSchemaPropsAddressAlias *JSONSchemaProps
+
+	all := make(map[string]interface{})
+	if err := json.Unmarshal(data, &all); err != nil {
+		return err
+	}
+	extensions := make(map[string]interface{})
+	for k, v := range all {
+		if !strings.HasPrefix(k, "x-") || strings.HasPrefix(k, "x-kubernetes") {
+			continue
+		}
+		extensions[k] = v
+	}
+	if err := json.Unmarshal(data, JSONSchemaPropsAddressAlias(s)); err != nil {
+		return err
+	}
+	s.SpecExtensions = extensions
 	return nil
 }
 

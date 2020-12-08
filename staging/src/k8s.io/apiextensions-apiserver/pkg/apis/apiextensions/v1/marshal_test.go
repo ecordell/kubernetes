@@ -148,3 +148,60 @@ func TestJSONSchemaPropsOrArrayMarshalJSON(t *testing.T) {
 		}
 	}
 }
+
+func TestJSONSchemaSpecExtensionsUnmarshalJSON(t *testing.T) {
+	cases := []struct {
+		input  string
+		result JSONSchemaProps
+	}{
+		{`{"x-my-extension": "test", "x-my-obj": {"its": "an", "object": 1}}`, JSONSchemaProps{SpecExtensions:
+			map[string]interface{}{
+				"x-my-obj": map[string]interface{}{
+					"its":      "an",
+					"object":  int64(1),
+				},
+				"x-my-extension": "test",
+			}},
+		},
+	}
+
+	for _, c := range cases {
+		var result JSONSchemaProps
+		if err := json.Unmarshal([]byte(c.input), &result); err != nil {
+			t.Errorf("Failed to unmarshal input '%v': %v", c.input, err)
+		}
+		if !reflect.DeepEqual(result, c.result) {
+			t.Errorf("Failed to unmarshal input '%v': expected %+v, got %+v", c.input, c.result, result)
+		}
+	}
+}
+
+func TestJSONSchemaSpecExtensionsMarshalJSON(t *testing.T) {
+	cases := []struct {
+		input  JSONSchemaPropsOrArrayHolder
+		result string
+	}{
+		{
+			input: JSONSchemaPropsOrArrayHolder{JSPoA: JSONSchemaPropsOrArray{Schema: &JSONSchemaProps{SpecExtensions:
+				map[string]interface{}{
+					"x-my-obj": map[string]interface{}{
+						"its":      "an",
+						"object":  int64(1),
+					},
+					"x-my-extension": "test",
+				}},
+			}},
+			result: `{"val1":{"x-my-extension":"test","x-my-obj":{"its":"an","object":1}}}`,
+		},
+	}
+
+	for i, c := range cases {
+		result, err := json.Marshal(&c.input)
+		if err != nil {
+			t.Errorf("%d: Unexpected error marshaling input '%v': %v", i, c.input, err)
+		}
+		if string(result) != c.result {
+			t.Errorf("%d: Failed to marshal input '%v': expected: %q, got %q", i, c.input, c.result, string(result))
+		}
+	}
+}
